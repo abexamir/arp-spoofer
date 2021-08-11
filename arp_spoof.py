@@ -40,7 +40,6 @@ def restore(destination_ip, source_ip):
 
 if __name__ == '__main__':
     if not len(sys.argv) == 5:
-        print(len(sys.argv))
         sys.exit('[!] Usage: # python3 arp_spoofer.py -t [target ip] -r [router ip]')
     if not os.geteuid() == 0:
         sys.exit('[!] This script must be run as root!')
